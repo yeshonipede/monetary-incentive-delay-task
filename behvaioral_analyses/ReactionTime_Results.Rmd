@@ -1,0 +1,508 @@
+### This analysis examines reaction time behavior in the Monetary Incentive Delay (MID) task. The goal is to characterize overall reaction time distributions, assess how reaction times vary across cue types and magnitudes, and evaluate individual differences in sensitivity to cue magnitude. These analyses are intended to provide a descriptive and exploratory overview of reaction time patterns
+
+```{r loading packages, include=FALSE}
+library(dplyr)
+library(readr)
+library(stringr)
+library(purrr)
+library(lme4)
+library(ggplot2)
+library(tidyverse)
+```
+
+```{r loading data, echo=FALSE}
+#setting directories 
+setwd("/restricted/projectnb/cd-lab/yesh/physio/MID")
+csv_dir <- "./CSVs"
+getwd()
+csv_paths <- list.files(path = csv_dir, pattern = "^p\\d+_data\\.csv$", full.names = TRUE)
+print(csv_paths)
+print(length(csv_paths))
+```
+
+```{r labeling, include=FALSE}
+# Read all data and add subject column
+all_data_messy <- map_dfr(csv_paths, function(path) {
+  df <- read_csv(path, show_col_types = FALSE)
+  subject_id <- str_extract(basename(path), "^p\\d+")
+  df$subject <- subject_id
+  df
+})
+
+#Remove data where RT is under 0.1
+all_data <-all_data_messy[(all_data_messy$ReactionTime>0.100),]
+dim(all_data)
+
+#RemoveNA (Early Hits)
+all_data <- all_data[!is.na(all_data$ReactionTime), ]  
+```
+
+Trials where RT is less that 0.1s was excluded
+
+```{r data cleaning, include=FALSE}
+# Read all data and add subject column
+all_data_messy <- map_dfr(csv_paths, function(path) {
+  df <- read_csv(path, show_col_types = FALSE)
+  subject_id <- str_extract(basename(path), "^p\\d+")
+  df$subject <- subject_id
+  df
+})
+
+#Remove data where RT is under 0.1
+all_data <-all_data_messy[(all_data_messy$ReactionTime>0.100),]
+dim(all_data)
+
+#RemoveNA (Early Hits)
+all_data <- all_data[!is.na(all_data$ReactionTime), ]
+
+#dim(all_data)
+```
+
+Reaction times were median-centered within each participant by subtracting each participant’s median reaction time from their trial-level reaction times. This produced a relative reaction time measure reflecting trial-by-trial deviations from each subject’s typical response speed
+
+```{r median_centering, include=FALSE}
+#Add a baseline adjusting column 
+all_data <- all_data %>%
+  group_by(subject) %>%
+  mutate(
+    median_RT=median(ReactionTime, na.rm=TRUE),
+    normalized_RT=ReactionTime - median_RT
+  ) %>%
+  ungroup()
+
+
+```
+
+```{r Adding_cols, include=FALSE}
+
+all_data <- all_data %>%
+  mutate(
+    cue_magnitude = case_when(
+      CueType %in% c(1, 6) ~ "1",
+      CueType %in% c(2, 7) ~ "3",
+      CueType %in% c(3, 8) ~ "5",
+      CueType %in% c(4,9) ~ "7",
+      CueType %in% c(5,10) ~ "9",
+      TRUE                 ~ "unknown"
+    ))
+
+all_data <- all_data %>%
+  mutate(Gain = ifelse(CueType >= 6 & CueType <= 10, 1, 0))
+
+```
+
+## Does RT Drift Across the Session?
+
+RTs stay pretty consistent across runs across participans
+
+```{r GroupRTAcrossRuns, echo=FALSE}
+
+#summarizing per run medians for each sub 
+run_summary <- all_data %>%
+  group_by(subject, RunNumber) %>%
+  summarize(
+    median_norm_RT = median(normalized_RT, na.rm =TRUE)
+  ) %>%
+  ungroup()
+
+#computing group level mean and medians per run 
+group_summary <- run_summary %>%
+  group_by(RunNumber) %>%
+  summarize(
+    group_mean=mean(median_norm_RT, na.rm=TRUE),
+    group_median=median(median_norm_RT, na.rm=TRUE)
+  )
+
+#Spahetti plots and group trends 
+ggplot(run_summary, aes(x = RunNumber, y = median_norm_RT, group = subject)) +
+  geom_line(aes(color = subject), alpha = 0.4, linewidth = 0.8) +  # individual lines
+  geom_point(aes(color = subject), alpha = 0.6, size = 1.8) +      # subject points per run
+  
+  # Group-level trends
+  geom_line(data = group_summary, aes(x=RunNumber, y = group_mean), color = "black", linewidth = 1.3, inherit.aes = FALSE) +
+  geom_line(data = group_summary, aes(x=RunNumber, y = group_median), color = "red", linetype = "dashed", linewidth = 1.1, inherit.aes = FALSE) +
+  
+  # Optional: group-level points
+  geom_point(data = group_summary, aes(x=RunNumber, y = group_mean), color = "black", size = 2.5, inherit.aes = FALSE) +
+  geom_point(data = group_summary, aes(x=RunNumber, y = group_median), color = "red", size = 2.5, inherit.aes = FALSE) +
+  
+  theme_minimal(base_size = 14) +
+  labs(
+    title = "Median Centered Reaction Time per Run",
+    subtitle = "Each line = participant | Black = group mean | Red dashed = group median",
+    x = "Run",
+    y = "Median Normalized RT"
+  ) +
+  theme(legend.position = "none")
+```
+
+## How do raw reaction time distributions differ across participants in terms of spread and skewness?
+
+The RT distribution across subjects is pretty consistent with the mode peak occurring right before 0.25s and right-skewed tails suggesting a few number of slower reaction times.
+
+```{r, fig.width=10, fig.height=10, echo=FALSE}
+#RT Distribution by Subject
+ggplot(all_data, aes(x = ReactionTime)) +
+  geom_density(fill = "steelblue", alpha = 0.4, color = "black") +
+  facet_wrap(~ subject, scales = "free_y") +
+  theme_minimal(base_size = 12) +
+  labs(
+    title = "Reaction Time Distributions by Subject",
+    x = "Reaction Time (s)",
+    y = "Density of Trials"
+  )
+
+```
+
+## What do reaction times look like across all participants in this task?
+
+Reaction times across all participants are tightly clustered around a fast central peak (roughly \~250 ms), with a pronounced right-skewed tail extending toward slower responses. Most trials fall within a relatively narrow range of fast reaction times, while a smaller number of trials show substantially slower responses.
+
+```{r, echo=FALSE}
+ggplot(all_data, aes(ReactionTime))+
+  geom_density(fill = "purple", alpha = 0.4, color = "black") +
+  theme_minimal(base_size = 14) +
+  labs(
+    title = "Reaction Time Distributions at the Group Level",
+    x = "Raw Reaction Time (s)",
+    y = "Density of Participants"
+  )
+```
+
+Outliers are very common in RT data collection. When assessing RT patterns at the group level, mean of medians was looked at in order to better tolerate these outliers.
+
+```{r RT summary code, include=FALSE}
+#Subject summary -- each participants median RT per cue magnitude
+subject_medians <- all_data %>%
+  group_by(subject, cue_magnitude, FixationDuration) %>%
+  summarise(median_RT=median(normalized_RT, na.rm=TRUE)) %>%
+  ungroup()
+
+#Compute group mean of those medians per cue magnitude 
+group_summary_mom <- subject_medians %>%
+  group_by(cue_magnitude) %>%
+  summarise(
+    mean_of_medians=mean(median_RT, na.rm=TRUE),
+    se=sd(median_RT, na.rm=TRUE) / sqrt(n())
+  )  
+
+group_summary_mom_fix <- subject_medians %>%
+  group_by(FixationDuration) %>%
+  summarise(
+    mean_of_medians = mean(median_RT, na.rm = TRUE),
+    se = sd(mean_of_medians, na.rm = TRUE) / sqrt(n())
+  )
+
+group_summary_full<- subject_medians %>%
+  group_by(cue_magnitude, FixationDuration) %>%
+  summarise(
+    mean_of_medians=mean(median_RT, na.rm=TRUE),
+    se=sd(median_RT, na.rm=TRUE) / sqrt(n())
+  )  
+
+
+group_cuetype <- all_data %>%
+  group_by(subject, CueType) %>%
+  summarise(median_RT_CT = median(normalized_RT, na.rm = TRUE)) %>%
+  ungroup()
+
+group_cuetype_mom <- group_cuetype %>%
+  group_by(CueType) %>%
+  summarise(
+    mean_of_medians = mean(median_RT_CT, na.rm = TRUE),
+    se = sd(median_RT_CT, na.rm = TRUE) / sqrt(n())
+  )
+
+
+subject_gain <- all_data %>%
+  group_by(subject,Gain) %>%
+  summarise(median_RT_val=median(normalized_RT, na.rm=TRUE)) %>%
+  ungroup()
+
+subject_gain_mom <-subject_gain %>%
+  group_by(Gain) %>%
+  summarise(
+    mean_of_medians=mean(median_RT_val, na.rm=TRUE),
+    se=sd(median_RT_val, na.rm=TRUE)/sqrt(n())
+  )
+```
+
+## On average, how do participants' respond to each different cue magnitudes?
+Participants RT may follow a parametric response to cue magnitude -- participants took the longest time to response to cues that gave them the opportunity to win or lose 1 dollar and responded quickest to cues that gave them the opportunity to win or lose 9 dollars.
+
+```{r group-magnitude_RT, echo=FALSE}
+ggplot(group_summary_mom, aes(x = cue_magnitude, y = mean_of_medians)) +
+  geom_line(group = 1, color = "steelblue", size = 1.2) +
+  geom_point(size = 3, color = "steelblue") +
+  geom_errorbar(aes(ymin = mean_of_medians - se, ymax = mean_of_medians + se),
+                width = 0.1, color = "steelblue") +
+  theme_minimal(base_size = 14) +
+  labs(
+    title = "Group-Level Mean of Median-Centered Subject RTs 
+    by Cue Magnitude",
+    x = "Cue Magnitude",
+    y = "Mean of Median-Centered Subject RTs (s)"
+  )
+```
+
+
+## At the group level, do participants respond differently to cues that indicate the potential to gain money on the upcoming trial vs cues that indicate the potential to lose money on the upcoming trial?
+
+```{r, echo=FALSE}
+ggplot(subject_gain_mom, aes(x = factor(Gain), y = mean_of_medians, color = factor(Gain))) +
+  geom_point(size = 5) +
+  geom_errorbar(aes(ymin = mean_of_medians - se, ymax = mean_of_medians + se),
+                width = 0.1, size = 1) +
+  labs(
+    title = "Group-Level Mean of Median-Centered Subject 
+    RTs by Cue Valence",
+    x = "Gain Condition",
+    y = "Mean of Subject Medians (RT, s)",
+    color = "Gain"
+  ) +
+  scale_color_manual(values = c("0" = "indianred2", "1" = "palegreen4")) +
+  scale_x_discrete(labels = c("0" = "Loss", "1" = "Gain")) +
+  theme_minimal(base_size = 14)
+
+```
+
+At the group level, participants respond with almost the same speed to potential loss and potential gain trials
+
+## Do participants respond differently depending on cue type (loss vs gain, and magnitude)?
+
+```{r, echo=FALSE}
+ggplot(group_cuetype_mom, aes(x = factor(CueType), y = mean_of_medians)) +
+  geom_point(aes(color = CueType >= 6), size = 4) +
+  geom_errorbar(aes(ymin = mean_of_medians - se, ymax = mean_of_medians + se,
+                    color = CueType >= 6),
+                width = 0.2) +
+  scale_color_manual(
+    values = c("FALSE" = "indianred2", "TRUE" = "palegreen3"),
+    labels = c("1–5 (Loss)", "6–10 (Gain)"),
+    name = "Cue Type Range"
+  ) +
+  labs(
+    title = "Group-Level Mean of Median-Centered 
+    Subject RT by Cue Type",
+    x = "Cue Type",
+    y = "Mean of Median-Centered RT (s)"
+  ) +
+  theme_minimal(base_size = 14)+
+  scale_x_discrete(
+    labels = c(
+      "1" = "-$1", "2" = "-$3", "3" = "-$5", "4" = "-$7", "5" = "-$9",
+      "6" = "+$1", "7" = "+$3", "8" = "+$5", "9" = "+$7", "10" = "+$9"
+    )
+  ) 
+
+```
+
+RT varies slightly with cue type. Loss cues tend to be associated with slightly slower responses relative to the participants' median RTs, whereas gain cues are generally associated with slightly faster responses.
+
+```{r RT for each participant at each cue mag, include=FALSE}
+#Subject medians -- RT for each participant for each cue magnidue
+subject_medians_mag <- all_data %>%
+  group_by(subject, cue_magnitude, ) %>%
+  summarise(median_RT = median(normalized_RT, na.rm = TRUE)) %>%
+  ungroup()
+
+subject_medians_mag <- subject_medians_mag %>%
+  mutate(cue_mag_num = as.numeric(cue_magnitude))
+
+```
+
+## Is there a linear relationship between cue magnitude and participants' typical reaction times?
+
+Yes -- according to the linear model reaction time decreases as cue magnitude increases. For each one-unit increase in cue magnitude, participants’ median reaction time decreases by about 1.6 milliseconds on average.
+
+```{r echo=FALSE}
+#simple linear model
+lm_simple <- lm(median_RT ~ cue_mag_num, data = subject_medians_mag)
+summary(lm_simple)
+```
+
+```{r echo=FALSE}
+#linear mixed effects model with random intercept (difference in p RT)
+ggplot(subject_medians_mag, aes(x = factor(cue_mag_num), y = median_RT)) +
+  geom_point(color="blue", size=3) +
+  geom_smooth(aes(group = 1), method="lm", color="red", se=TRUE) +
+  labs(
+    x="Cue Magnitude",
+    y="Median Reaction Time (s)",
+    title="Effect of Cue Magnitude on Median RT per Subject"
+  ) +
+  theme_minimal()
+```
+
+# Slope Sensitivity
+
+We hypothesized that participants differ in how strongly their reaction times change as a function of cue magnitude.To quantify individual differences in sensitivity to cue magnitude, we estimated a participant-specific slope relating reaction time to cue magnitude. More negative slopes indicate greater speeding with increasing cue magnitude, whereas slopes closer to zero indicate weaker cue sensitivity.
+
+```{r include=FALSE}
+slopes_df <- subject_medians_mag %>%
+  group_by(subject) %>%
+  summarise(slope_cue=coef(lm(median_RT~as.numeric(cue_magnitude)))[2]) %>%
+  ungroup
+slopes_df
+```
+
+## What is the distribution of "cue sensitivity slopes" across participants?
+
+More negative slopes indicates more sensitivity to increasing RTs as cue magnitudes increase where as slopes closer to 0 suggest less cue tendency to respond faster to larger cues.
+
+The bulk of participants show slight sensitivity to increasing cue magnitude. There is not much variability in cue magnitude sensitivity across participants.
+
+```{r echo=FALSE}
+ggplot(slopes_df, aes(x = slope_cue)) +
+  geom_histogram(binwidth = 0.001, fill = "skyblue", color = "black") +
+  geom_vline(xintercept = 0, linetype = "dashed", color = "red") +
+  xlab("Participant-specific slope (cue magnitude sensitivity)") +
+  ylab("Number of participants") +
+  ggtitle("Distribution of Cue Sensitivity Slopes Across Participants")
+```
+
+```{r preparing for corr plotting, include=FALSE}
+#Preparing datasets for plotting sensitivity vs other task variables of interest 
+all_data_relevant <- all_data %>%
+  group_by(subject) %>%
+  summarise(
+    median_RT_raw = median(ReactionTime, na.rm = TRUE),
+    pWin = mean(IsWin == 1, na.rm = TRUE),
+    mean_cal = mean(Calibration, na.rm = TRUE),
+    total_points = sum(FeedbackValue, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  left_join(
+    subject_medians_mag %>%
+      group_by(subject) %>%
+      summarise(slope_cue=coef(lm(median_RT~as.numeric(cue_magnitude)))[2]),
+    by = "subject"
+  )
+all_data_relevant
+
+all_data_relevant_messy <- all_data_messy %>%
+  group_by(subject) %>%
+  summarise(
+    median_RT_raw = median(ReactionTime, na.rm = TRUE),
+    pWin = mean(IsWin == 1, na.rm = TRUE),
+    mean_cal = mean(Calibration, na.rm = TRUE),
+    total_points = sum(FeedbackValue, na.rm = TRUE),
+    .groups = "drop"
+  ) %>%
+  left_join(
+    subject_medians_mag %>%
+      group_by(subject) %>%
+      summarise(slope_cue=coef(lm(median_RT~as.numeric(cue_magnitude)))[2]),
+    by = "subject"
+  )
+all_data_relevant_messy
+
+#setting up a custom theme
+custom_theme <- theme_minimal(base_size = 14) +
+  theme(
+    plot.title = element_text(face = "bold", hjust = 0.5, size = 16),
+    axis.title = element_text(size = 14),
+    axis.text = element_text(size = 12),
+    panel.grid.minor = element_blank(),
+    panel.grid.major = element_line(color = "gray85"),
+    plot.background = element_rect(fill = "white", color = NA)
+  )
+
+
+```
+
+## Is cue sensitivity correlated with higher raw median RT across the task?
+
+Moderately - cue sensitivity is slightly correlated with faster or slower reaction times across the task
+
+```{r Sensitivity v RT, echo=FALSE}
+cor_val <- cor(all_data_relevant$slope_cue, all_data_relevant$median_RT_raw, use = "complete.obs")
+annot <- paste0("r = ", round(cor_val, 2))
+
+ggplot(all_data_relevant, aes(x = slope_cue, y = median_RT_raw)) +
+  geom_point(alpha = 0.7, color = "#2E86C1", size = 3) +
+  geom_smooth(method = "lm", se = TRUE, color = "#E67E22", linetype = "dashed") +
+  xlab("Participant-specific slope (Cue Magnitude)") +
+  ylab("Median RT across task ((Raw), s)") +
+  ggtitle("Cue Sensitivity vs Median RT Across Task") +
+  geom_text(aes(x = Inf, y = Inf, label = annot),
+            hjust = 1.1, vjust = 1.5, size = 5, color = "gray30") +
+  custom_theme
+```
+
+## Is cue sensitivity correlated with winning more trials across the task?
+
+No -- there is very little correlation between cue sensitivity and proportion of trials won
+
+```{r Cue Sensitivity v pWin, echo=FALSE}
+cor_val <- cor(all_data_relevant$slope_cue, all_data_relevant$pWin, use = "complete.obs")
+annot <- paste0("r = ", round(cor_val, 2))
+
+ggplot(all_data_relevant, aes(x = slope_cue, y = pWin)) +
+  geom_point(alpha = 0.7, color = "#2E86C1", size = 3) +
+  geom_smooth(method = "lm", se = TRUE, color = "seagreen", linetype = "dashed") +
+  xlab("Participant-specific slope (Cue Magnitude)") +
+  ylab("pWin (proportion of trials successfully hit)") +
+  ggtitle("Cue Sensitivity vs pWin") +
+  geom_text(aes(x = Inf, y = Inf, label = annot),
+            hjust = 1.1, vjust = 1.5, size = 5, color = "gray30") +
+  custom_theme
+```
+
+## Is cue sensitivity correlated with mean calibration across the task?
+
+No -- cue sensitivity is not correlated with mean task calibration
+
+```{r sensitivity vs cal, echo=FALSE}
+cor_val <- cor(all_data_relevant$slope_cue, all_data_relevant$mean_cal, use = "complete.obs")
+annot <- paste0("r = ", round(cor_val, 2))
+
+ggplot(all_data_relevant, aes(x = slope_cue, y = mean_cal)) +
+  geom_point(alpha = 0.7, color = "#2E86C1", size = 3) +
+  geom_smooth(method = "lm", se = TRUE, color = "red", linetype = "dashed") +
+  xlab("Participant-specific slope (Cue Magnitude)") +
+  ylab("Mean Calibration (s)") +
+  ggtitle("Cue Sensitivity vs Mean Task Calibration") +
+  geom_text(aes(x = Inf, y = Inf, label = annot),
+            hjust = 1.1, vjust = 1.5, size = 5, color = "gray30") +
+  custom_theme
+```
+
+## Is cue sensitivity correlated with total points earned across the task?
+
+Moderately -- cue sensitivity is moderately correlated with total points earned. Responding quicker to larger cues is moderately (r=-0.5) correlated to earning more points
+
+```{r sensitivity v total points, echo=FALSE}
+cor_val <- cor(all_data_relevant_messy$slope_cue, all_data_relevant$total_points, use = "complete.obs")
+annot <- paste0("r = ", round(cor_val, 2))
+
+ggplot(all_data_relevant_messy, aes(x = slope_cue, y = total_points)) +
+  geom_point(alpha = 0.7, color = "#2E86C1", size = 3) +
+  geom_smooth(method = "lm", se = TRUE, color = "hotpink", linetype = "dashed") +
+  xlab("Participant-specific slope (Cue Magnitude)") +
+  ylab("Total Points") +
+  ggtitle("Cue Sensitivity vs Total Points") +
+  geom_text(aes(x = Inf, y = Inf, label = annot),
+            hjust = 1.1, vjust = 1.5, size = 5, color = "gray30") +
+  custom_theme
+
+```
+
+## Are reaction times a function of fixation duration?
+
+Yes- it looks like reaction times decrease (become quicker) as fixation duration increases. This could be a result as the participant being "more ready" for the target as the pre-target fixation duration increases
+
+```{r, echo=FALSE}
+ggplot(group_summary_mom_fix, aes(x = FixationDuration, y = mean_of_medians)) +
+  geom_line(group = 1, color = "darkgreen", size = 1.2) +
+  geom_point(size = 3, color = "darkgreen") +
+  geom_errorbar(aes(ymin = mean_of_medians - se, ymax = mean_of_medians + se),
+                width = 0.1, color = "darkgreen") +
+  theme_minimal(base_size = 14) +
+  labs(
+    title = "Group Mean of Subject Medians by Fixation Duration",
+    x = "Fixation Duration",
+    y = "Mean of Subject Medians (RT, s)"
+  )
+
+```

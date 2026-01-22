@@ -1,0 +1,407 @@
+---
+title: "FixationLength_Results"
+output: html_document
+date: "2026-01-13"
+---
+
+### This is a behavioral analysis investigating fixation times in the the MID data
+
+```{r loading packages, include=FALSE}
+library(dplyr)
+library(readr)
+library(stringr)
+library(purrr)
+library(lme4)
+library(ggplot2)
+library(tidyverse)
+```
+
+```{r loading data, include=FALSE}
+setwd("/restricted/projectnb/cd-lab/yesh/physio/MID")
+csv_dir <- "./CSVs"
+getwd()
+csv_paths <- list.files(path = csv_dir, pattern = "^p\\d+_data\\.csv$", full.names = TRUE)
+print(csv_paths)
+
+
+# Read all data and add subject column
+all_data <- map_dfr(csv_paths, function(path) {
+  df <- read_csv(path, show_col_types = FALSE)
+  subject_id <- str_extract(basename(path), "^p\\d+")
+  df$subject <- subject_id
+  df
+})
+colnames(all_data)
+```
+
+```{r labeling and binning, include=FALSE}
+#Labeling the different cue subdivisions and binning fixation durations
+all_data <- all_data %>%
+  mutate(
+    cue_category = case_when(
+      CueType %in% c(1, 2) ~ "small_gain",
+      CueType == 3         ~ "mid_gain",
+      CueType %in% c(4, 5) ~ "large_gain",
+      CueType %in% c(6, 7) ~ "small_loss",
+      CueType == 8         ~ "mid_loss",
+      CueType %in% c(9,10) ~ "large_loss",
+      TRUE                 ~ "unknown"
+    ),
+    
+    cue_size = case_when(
+      CueType %in% c(1, 2, 6, 7) ~ "small",
+      CueType %in% c(3, 8)       ~ "medium",
+      CueType %in% c(4, 5, 9, 10) ~ "large",
+      TRUE                       ~ "unknown"
+    ),
+    
+    cue_valence = case_when(
+      CueType %in% c(1, 2, 3, 4, 5)  ~ "potential_gain",
+      CueType %in% c(6, 7, 8, 9, 10) ~ "potential_loss",
+      TRUE                           ~ "unknown"
+    ),
+    
+    fixation_bin = case_when(
+      FixationDuration %in% c(1.0, 1.5, 2.0) ~ "short",
+      FixationDuration %in% c(2.5, 3.0, 3.5) ~ "medium",
+      TRUE                                  ~ "long"
+    ),
+    
+    cue_magnitude=case_when(
+      CueType %in% c(1,6) ~ "$1",
+      CueType %in% c(2,7) ~ '$3',
+      CueType %in% c(3,8) ~ "$5",
+      CueType %in% c(4,9) ~ "$7",
+      CueType %in% c(5,10) ~ "$9"
+    )
+  )
+```
+
+# Proportion of Hit (pHit)
+
+## Out of all gain trials in the task, what proportion were hits?
+
+Out of all gain trials across all participants, 63% were hits.
+
+## Out of all loss trials in the task, what proportion were hits?
+
+Out of all loss trials across all participants, 61% were hits.
+
+At the group level, the overall proportion of hits was comparable for gain and loss cues, indicating that across all trials in the experiment, cue valence did not meaningfully affect hit probability.
+
+```{r}
+# Calculate proportion of hits per cue_valence
+val_pHit <- all_data %>%
+  group_by(cue_valence) %>%
+  summarize(pHit = mean(IsWin),
+            n=n(),
+            se=sd(IsWin)/sqrt(n)) 
+
+#plot of long, short, med fixation bins vs pHit
+ggplot(val_pHit, aes(x = cue_valence, y = pHit, fill = cue_valence)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = pHit - se, ymax = pHit + se), width = 0.2)+
+  ylim(0,1) +
+  labs(x = "Cue Valence", y = "Average Probability of Hit (pHit)", title="Cue Valence vs pHit Group Level") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5))
+
+```
+
+### How consistent is the this balanced gain-loss effect across individuals?
+
+Despite similar group-level hit proportions, participant-level analyses revealed substantial heterogeneity in the effect of cue valence.
+
+```{r group level pHit Val, echo=FALSE}
+scatter_data <- all_data %>%
+  group_by(subject, cue_valence) %>%
+ summarize(pHit = mean(IsWin)) %>%
+  pivot_wider(names_from = cue_valence, values_from = pHit)
+
+
+ggplot(scatter_data, aes(x = potential_gain, y = potential_loss)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  labs(x = "pHit (Potential Gain)", y = "pHit (Potential Loss)", title = "Participant-level Cue Valence pHit") +
+  theme_minimal()
+```
+
+## How does the probability of a hit differ between small and large cues on the individual level?
+
+At the participant level, the majority of participants had higher pHit rates for the large cues vs the small ones.
+
+```{r ppt cue size vs pHit, echo=FALSE}
+scatter_data <- all_data %>%
+  filter(cue_size %in% c("small", "large")) %>%
+  group_by(subject, cue_size) %>%
+  summarize(pHit = mean(IsWin), .groups = "drop") %>%
+  pivot_wider(names_from = cue_size, values_from = pHit)
+
+ggplot(scatter_data, aes(x = small, y = large)) +
+  geom_point() +
+  geom_abline(slope = 1, intercept = 0, linetype = "dashed") +
+  labs(x = "pHit (Small Cue)", y = "pHit (Large Cue)", title = "Cue Size vs pHit at the Participant Level") +
+  theme_minimal()
+```
+### How does the probability of a hit vary across potential cue magnitudes at the group level?
+At the group. level, the probability of successfully hitting a trial is about equal across all magnitude types except for the +/- $1 cue which is slightly (~8%) less likely to result in a successful hit
+
+```{r cue mag vs phit, echo=FALSE}
+Cat_pHit <- all_data %>%
+  group_by(cue_magnitude) %>%
+  summarize(
+    pHit = mean(IsWin),
+    n = n(),
+    se = sqrt((pHit * (1 - pHit)) / n)
+  )
+
+
+ggplot(Cat_pHit, aes(x = cue_magnitude, y = pHit, fill = cue_magnitude)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin=pHit-se, ymax=pHit+se), width=0.2)+
+  ylim(0,1) +
+  labs(x = "Cue Magnitude", y = "Probability of Hit (pHit)", title="Cue Magnitude vs pHit") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5),)
+
+```
+
+
+## How does the probability of a hit vary across pre-target fixation durations at the group level?
+Across all participants' short duration fixation trials, medium duration fixation trials, and long duration fixation trials, the longer pre-target fixation trials tended to have the highest proportion of targets successfully hit -- this is likely as result of the participant having more time to prepare for the trial
+
+```{r pHit vs fixation, echo=FALSE}
+# Calculate proportion of hits per fixation_bin
+summary_data <- all_data %>%
+  group_by(fixation_bin) %>%
+  summarize(
+    pHit = mean(IsWin),
+    n = n(),
+    se = sd(IsWin) / sqrt(n)
+  )
+
+#plot of long, short, med fixation bins vs pHit
+ggplot(summary_data, aes(x = fixation_bin, y = pHit, fill = fixation_bin)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = pHit - se, ymax = pHit + se), width = 0.2)+
+  ylim(0,1) +
+  labs(x = "Fixation Bin", y = "Probability of Hit (pHit)", title="pHit vs Pre-Target Fixation Duration at the Group Level") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5))
+
+```
+
+```{r 9 fix bins vs phit, echo=FALSE}
+summary_data <- all_data %>%
+  group_by(FixationDuration) %>%
+  summarize(pHit = mean(IsWin),
+            n = n(),
+            se = sd(IsWin) / sqrt(n)
+  )
+
+#Plot of 9 fixation bins vs pHit
+ggplot(summary_data, aes(x = FixationDuration, y = pHit, fill=FixationDuration)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = pHit - se, ymax = pHit + se), width = 0.2)+
+  labs(x = "Fixation Duration", y = "Probability of Hit (pHit)", title="pHit vs Nine Pre-Target Fixation Durations") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5))
+```
+
+
+
+#These models have the isSingular barrier -- not sure what I will end up keeping or not so just leaving it in for now
+Because the task employed adaptive calibration to equate baseline performance across participants, there was no detectable between-subject variance in overall hit probability.
+```{r}
+all_data <- all_data %>%
+  mutate(
+    cue_size = factor(cue_size, levels = c("small", "medium", "large")),
+    cue_valence = factor(cue_valence, levels = c("potential_gain", "potential_loss")),
+    fixation_bin = factor(fixation_bin, levels = c("short", "medium", "long")),
+    subject = factor(subject),
+    IsWin = as.numeric(IsWin)  
+  )
+```
+
+The logistic regression model revealed that of the cue size, cue valence, and fixation bin task aspects, fixation duration was the strongest determinant of a hit probability with medium and long fixation intervals increasing hit odds relative to the shorter fixations. 
+
+Cue size also exerted a modest positive effect, with medium and large cues increasing hit odds.
+
+Cue valence (gain vs loss) did not seem to significantly influence the probability of a hit. 
+```{r}
+glm(IsWin ~ cue_size + cue_valence + fixation_bin,
+    family = binomial,
+    data = all_data)
+
+```
+
+
+# Early Hits
+
+### How does the early hit rate differ across potential gain trials vs potential loss trials?
+
+The early hit rate was slightly higher (\~ 0.5%) in trails where there was the potential to gain money vs the potential to lose money
+
+```{r Early Hit Rate v valence, echo=FALSE}
+# Early Hit
+val_EH <- all_data %>%
+  group_by(cue_valence) %>%
+  summarize(
+    pEH = mean(EarlyHit == 1),
+    n = n(),
+    se = sqrt((pEH * (1 - pEH)) / n)
+  )
+
+
+ggplot(val_EH, aes(x = cue_valence, y = pEH, fill = cue_valence)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = pEH - se, ymax = pEH + se), width = 0.2) +
+  labs(x = "Cue Valence",
+       y = "Proportion of Early Hits",
+       title = "Cue Valence vs Early Hit Rate") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5))
+```
+
+## Which fixation bin durations result in the largest early hit rate?
+
+Longer fixation intervals led to a larger proportion of early hit trials where the participant attempted to hit the target prematurely. When participants had to wait longer before the target appeared, they were increasingly likely to respond too soon, suggesting that a longer anticipation period makes it harder to inhibit a premature response.
+
+```{r Fix Duration vs Early Hit, echo=FALSE}
+# Calculate proportion of hits per fixation_bin
+summary_dataEH <- all_data %>%
+  group_by(fixation_bin) %>%
+  summarize(
+    pEH = mean(EarlyHit == 1),
+    n = n(),
+    se = sqrt((pEH * (1 - pEH)) / n)
+  )
+#plot of long, short, med fixation bins vs EH
+ggplot(summary_dataEH, aes(x = fixation_bin, y = pEH, fill = fixation_bin)) +
+  geom_bar(stat = "identity") +
+    geom_errorbar(aes(ymin = pEH - se, ymax = pEH + se), width = 0.2) +
+  labs(x = "Fixation Bin", y = "Proportion of Early Hits", title="Fixation Bins vs Early Hit Rate") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5))
+
+```
+
+```{r fix vs early hit 9 bins, echo=FALSE}
+#Plotting for all 9 bins
+summary_dataEH9 <- all_data %>%
+  group_by(FixationDuration) %>%
+  summarize(
+    pEH = mean(EarlyHit == 1),
+    n = n(),
+    se = sqrt((pEH * (1 - pEH)) / n)
+  )
+
+#Plot of 9 fixation bins vs EH
+ggplot(summary_dataEH9, aes(x = FixationDuration, y = pEH, fill=FixationDuration)) +
+  geom_bar(stat = "identity") +
+  geom_errorbar(aes(ymin = pEH - se, ymax = pEH + se), width = 0.2) +
+  labs(x = "Fixation Duration", y = "Proportion of Early Hits", title="9 Fixation Bins vs Early Hit Rate") +
+  theme_minimal() +
+  theme(legend.position = "none",
+        plot.title = element_text(hjust = 0.5))
+```
+
+
+## Which task features predict whether a parcipant makes an early hit on a given trial, accounting for individual differences between participants?
+
+We modeled early hits at the trial level using a logistic mixed-effects model with random intercepts for subject. Fixation duration strongly predicted early-hit probability, with both medium and long fixation intervals associated with a significantly higher likelihood of early responses compared to short fixation.
+
+Cue size and cue valence did not significantly predict early hits. These results may suggest that early responses are primarily driven by temporal task structure rather than incentive properties
+
+```{r early hit model, echo=FALSE}
+#Model for Early Hit 
+model_main_EH <- glmer(EarlyHit ~ cue_size + cue_valence + fixation_bin + (1 | subject), 
+                    data = all_data, family = binomial)
+summary(model_main_EH)
+```
+
+# Total Earnings
+
+### Are there differences in cumulative run earnings across the task?
+
+Yes -- runs 2 and 4 have on average less cumulative earnings than runs 1 and 3. Runs 1 and 2 are performed back to back and runs 3 and 4 are performed back to back. This suggests that participants may experience some fatigue during the second pair of runs (2 and 4).
+
+```{r total earnings df, include=FALSE}
+run_total <-c(45,90,135,180)
+
+run_total_data <- all_data %>%
+  filter(Trial %in% run_total) %>%
+  mutate(run_num=match(Trial, run_total))
+
+```
+
+```{r earnings - group and ppt, echo=FALSE}
+#Calculate group average per block
+group_avg <- run_total_data %>%
+  group_by(run_num) %>%
+  summarise(mean_total=mean(CumulativeBlockTotal, na.rm=TRUE))
+
+ggplot() +
+  # Individual participant lines
+  geom_line(data = run_total_data, aes(x = run_num, y = CumulativeBlockTotal, group = subject, color = subject), alpha = 0.5) +
+  geom_point(data = run_total_data, aes(x = run_num, y = CumulativeBlockTotal, color = subject), alpha = 0.5) +
+  # Group average line
+  geom_line(data = group_avg, aes(x = run_num, y = mean_total), color = "black", size = 1.2) +
+  geom_point(data = group_avg, aes(x = run_num, y = mean_total), color = "black", size = 2) +
+  scale_x_continuous(breaks = 1:4, labels = paste("Run",1:4))+
+  theme_minimal() +
+  labs(x = "Trial (Milestone)", y = "Earnings Per Run ($)",
+       title = "Cumulative Earnings at Across Runs: Individual & Group Average")+
+  guides(color='none')
+
+```
+
+# Calibration Values
+
+At the beginning of the task, every participant begins with a calibration level of 0.3s. This means that the first target will appear on the screen for 300ms. The target automatically recalibrates to ensure that the participant successfully hits the target about 66% of the time. The calibration value is manually carried over from the final trial of the previous run.
+
+## As the task recalibrates to maintain \~66% success, do participants require progressively shorter target durations at the start of each run?
+
+No -- participants do not require progressively shorter target durations in successive run. On average, participants require faster targets going into the second run and then at the group level, participants require a similar target difficulty going into the third run before requiring a slightly easier target going into the final run. However, there is a lot of individual level variability in calibration patterns across the task.
+
+```{r Calibration - group and ppt, echo=FALSE}
+# First trial of each run
+trial_start <- c(1, 46, 91, 136)
+
+# Filter data for first trial of each run
+run_start_data <- all_data %>%
+  filter(Trial %in% trial_start) %>%
+  mutate(
+    run_label = factor(Trial, levels = trial_start),
+    run_num = as.numeric(run_label),
+    subject = as.factor(subject)
+  )
+
+# Calculate group average Calibration per run start
+group_run_cal <- run_start_data %>%
+  group_by(run_label) %>%
+  summarise(mean_cal = mean(Calibration, na.rm = TRUE)) %>%
+  mutate(run_num = as.numeric(run_label))
+
+# Plot
+ggplot() +
+  # Individual participant lines
+  geom_line(data = run_start_data, aes(x = run_num, y = Calibration, group = subject, color = subject), alpha = 0.5) +
+  geom_point(data = run_start_data, aes(x = run_num, y = Calibration, color = subject), alpha = 0.5) +
+  # Group average line
+  geom_line(data = group_run_cal, aes(x = run_num, y = mean_cal), color = "black", size = 1.2) +
+  geom_point(data = group_run_cal, aes(x = run_num, y = mean_cal), color = "black", size = 2) +
+  scale_x_continuous(breaks = 1:4, labels = levels(run_start_data$run_label)) +
+  theme_minimal() +
+  labs(x = "First Trial of Each Run", y = "Starting Calibration (s)",
+       title = "Calibration at First Trial of Each Run: Individual & Group Average",
+       color = "Subject") + 
+       guides(color='none')
+
+```
