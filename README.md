@@ -58,7 +58,52 @@ Key variables used in analysis included:
 
 
 # Physiological Analysis 
-## Target Aligned Analyses:
+
+## Cue Aligned Analysis Results:
+
+### How does IBI dynamically change around cue presentation in the MID task?
+* there is slight cardiac slowing after cue presentation which reflects the anticipatory response as participants wait for the target window
+![IBI shape cue](figures/Physio/Cue_aligned/group_ibi_cue.png)
+
+### Is the IBI timecourse consistent across runs?
+* The shape of the timecourse remained consistent across runs
+* IBI per trial tended to be greater as the task continued on -- this makes sense as the participants started to feel more settled in the scanner and less nervous
+![ibi time course across runs](figures/Physio/Cue_aligned/ibi_across_runs_cue.png)
+
+### How different is average IBI different across runs? 
+* Mean IBI increases across runs as participants feel more comfortable in the scanner and with the task
+
+![ibi time course across runs](figures/Physio/Cue_aligned/raw_ibi_across_runs.png)
+
+
+### Do participants' IBI timecourses differ between potential gain and loss trials?
+* The IBI timecourse (averaged across participants) is consistent when presented with potential gain or potential loss cue types
+
+![gain vs loss cue](figures/Physio/Cue_aligned/gainvsloss_cue.png)
+
+The t-test tests if there is statistically significant difference between the mean IBI in the two different conditions. The t-tests suggest that there is no statistically significant in the mean IBI between gain and loss trials in the 2s cue presentation window, nor in the 1s of guaranteed pre-target fixation time in each trial
+* Gain vs Loss IBI During Cue Presentation: t(18) = -0.533, p = 0.601
+* Gain vs Loss IBI During the First Second of the Fixation Period: t(18) = -1.862, p = 0.079
+
+### Do participants' IBI timecourses differ between small and large trial types? 
+
+The plots suggest there is not a big difference in the IBI changes during cue presentation between the small trials (magnitude 1 dollar and 3 dollar) vs the large trials (magnitude7 dollars and 9 dollars). It is worth noting that the IBI timecourse more steeply declines with the large trials during the 1s anticipation period. 
+![small vs large cue](figures/Physio/Cue_aligned/smallvslarge_cue.png)
+
+The paired t-test suggests that there are differences between the two groups but not yet at a statistically significant level. 
+* Gain vs Loss IBI During Cue Presentation: t(18) = 1.326, p = 0.202
+* Gain vs Loss IBI During the First Second of the Fixation Period: t(18) = -1.620, p = 0.123
+
+### Do difference waves suggest any meaningful effects of cue valence or magnitude on the participant-averaged IBI timecourse?
+To make it easier to compare how heart rate dynamics change over time between trial types, difference curves were created by subtracting one condition’s average IBI timecourse from another (for example, large - small trials). These curves highlight when one condition is changing more quickly than the other, helping summarize how the cardiac response unfolds differently across trial types rather than just comparing overall levels.
+
+* All differences seem to be within 1% of the baseline IBI, which suggests that differences in cue valence and magnitude do not meaningfully modulate participants' heart rates.
+![ibi time course across runs](figures/Physio/Cue_aligned/diff_waves_cue.png)
+
+
+
+
+## Target Aligned Analysis Results:
 ### How does IBI dynamically change around cue presentation in the MID task?¶
 * Pre-target anticipatory rise (~ -1 to 0s): IBI gradually increases across the 1s fixation period which may suggest cardiac slowing as participants anticipate the target presentation
 * Target and post-target deceleration (~1 to 5s): after the presentation of the target, IBI starts dropping quite rapidly and continues to drop into the IBI period. This indicates that HR increases as a response to the target presentation and feedback presentation.
@@ -90,6 +135,8 @@ Additionally, the t-test suggests that the mean IBI during the feedback window i
 * Hit vs Miss IBI During 2s Feedback Period: t(20) = 2.505, p = 0.021
 
 ### Do difference waves suggest any meaningful effects of cue valence, magnitude, or feedback on the participant-averaged IBI timecourse?
-Perhaps yes! The difference curve plot shows that average IBI falls up to 3% faster across the 2s feedback window range when participants see positive feedback (hit) vs negative feedback (miss)
+Perhaps yes! To make it easier to compare how heart rate dynamics change over time between trial types, difference curves were created by subtracting one condition’s average IBI timecourse from another (for example, large - small trials). These curves highlight when one condition is changing more quickly than the other, helping summarize how the cardiac response unfolds differently across trial types rather than just comparing overall levels.
+
+The difference curve plot shows that average IBI falls up to 3% faster across the 2s feedback window range when participants see positive feedback (hit) vs negative feedback (miss)
 ![diff_waves](figures/Physio/Target_aligned/diff_waves_target.png)
 
