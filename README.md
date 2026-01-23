@@ -218,6 +218,68 @@ Yes- it looks like reaction times decrease (responses happen quicker) as fixatio
 ![Sensitivity vs Median RT](figures/Behavioral/RT/meanofmed_fixdur.png)
 
 
+## Other Task Performance Metrics (RT, pHit, etc.)
+# pHit
+
+### How successful were participants in hitting gain trials vs loss trials at the group level?
+Of all the gain trials shown, participants successfully hit 63%. Meanwhile, of all the loss trials presented, the group hit 61% of them.
+![Sensitivity vs Median RT](figures/Behavioral/Performance_Metrics/cueval_pHit.png)
+
+### How consistent is this balanced success rate across individuals?
+Despite similar group-level hit proportions, participant-level analyses revealed substantial heterogeneity in the effect of cue valence. Over half of participatns had a higher success rate when it came to gain trials vs loss trials. 
+
+![Sensitivity vs Median RT](figures/Behavioral/Performance_Metrics/sublevel_pHit_CueVal.png)
+
+### How does the probability of a hit differ between small and large cue trials on the individual level? 
+At the participant level, the majority of participants exhibited higher pHit rates for the large cues vs the small ones.
+
+![Sensitivity vs Median RT](figures/Behavioral/Performance_Metrics/SubLevel_CueSize_pHit.png)
+
+### How does the probability of a hit vary across cue magnitudes at the group level?
+
+At the group. level, the probability of successfully hitting a trial is about equal across all magnitude types except for the +/- $1 cue which is slightly (~8%) less likely to result in a successful hit
+
+![Sensitivity vs Median RT](figures/Behavioral/Performance_Metrics/CueMag_pHit.png)
+
+### How does the probability of a hit vary across the various pre-target fixation period durations at the group level?
+Across all participants’ exposure to short duration fixation durations, medium duration fixation durations, and long duration fixation durations, the longer pre-target fixation trials tended to have the highest proportion of targets successfully hit – this is likely as result of the participant having more time to prepare for the trial
+
+![Sensitivity vs Median RT](figures/Behavioral/Performance_Metrics/pHit_fixation_group.png)
+
+![Sensitivity vs Median RT](figures/Behavioral/Performance_Metrics/pHit_NineFixDur.png)
+
+
+## Early Hits
+### How does the early hit rate differ across potential gain trials vs potential loss trials?
+The early hit rate was slightly higher (~ 0.5%) in trails where there was the potential to gain money vs the potential to lose money
+
+![Sensitivity vs Median RT](figures/Behavioral/Performance_Metrics/CueVal_EarlyHit.png)
+
+### Which fixation bin durations result in the largest early hit rate?
+Longer fixation intervals led to a larger proportion of early hit trials where the participant attempted to hit the target prematurely. When participants had to wait longer before the target appeared, they were increasingly likely to respond too soon, suggesting that a longer anticipation period makes it harder to inhibit a premature response.
+
+![Sensitivity vs Median RT](figures/Behavioral/Performance_Metrics/FixBin_EarlyHit.png)
+
+However, the highest proportion of Early Hits did occur in the trials with a 3s (medium) pre-target fixation duration. 
+
+![Sensitivity vs Median RT](figures/Behavioral/Performance_Metrics/NineFixBin_EarlyHit.png)
+
+
+### Which task features predict whether a parcipant makes an early hit on a given trial, accounting for individual differences between participants?
+Early hits at the trial level were modeled using a logistic mixed-effects model with random intercepts for subject. Fixation duration strongly predicted early-hit probability, with both medium and long fixation intervals associated with a significantly higher likelihood of early responses compared to short fixation.
+
+Cue size and cue valence did not significantly predict early hits. These results may suggest that early responses are primarily driven by temporal task structure rather than incentive properties.
+
+## Total Earnings
+### Are there differences in cumulative run earnings across the task?
+Yes – runs 2 and 4 have on average less cumulative earnings than runs 1 and 3. Runs 1 and 2 are performed back to back and runs 3 and 4 are performed back to back. This suggests that participants may experience some fatigue during the second pair of runs (2 and 4).
+
+![Sensitivity vs Median RT](figures/Behavioral/Performance_Metrics/SubLevel_Earnings_Runs.png)
+
+### As the task recalibrates to maintain ~66% success, do participants require progressively shorter target durations at the start of each run?
+No – participants do not require progressively shorter target durations in successive run. On average, participants require faster targets going into the second run and then at the group level, participants require a similar target difficulty going into the third run before requiring a slightly easier target going into the final run. However, there is a lot of individual level variability in calibration patterns across the task.
+
+![Sensitivity vs Median RT](figures/Behavioral/Performance_Metrics/SubLevel_Calibration_Runs.png)
 
 
 
