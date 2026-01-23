@@ -140,3 +140,99 @@ Perhaps yes! To make it easier to compare how heart rate dynamics change over ti
 The difference curve plot shows that average IBI falls up to 3% faster across the 2s feedback window range when participants see positive feedback (hit) vs negative feedback (miss)
 ![diff_waves](figures/Physio/Target_aligned/diff_waves_target.png)
 
+#Behavioral Analyses
+## Reaction Time 
+### Does RT Drift Across the Session?
+Run average and run median RTs stay pretty close to participants' task-median across runs and across participants.
+
+![RT across runs](figures/Behavioral/RT/Med_RT_perRun.png)
+
+### How do raw reaction time distributions differ across participants in terms of spread and skewness?
+The RT distribution across subjects is pretty consistent with the mode peak occurring right before 0.25s and right-skewed tails suggesting a few number of slower reaction times.
+
+![RT distribution sub level](figures/Behavioral/RT/sub-level_RTdist.png)
+
+### What do reaction times look like across all participants in this task?
+Reaction times across all participants are tightly clustered around a fast central peak (roughly ~250 ms), with a pronounced right-skewed tail extending toward slower responses. Most trials fall within a relatively narrow range of fast reaction times, while a smaller number of trials show substantially slower responses.
+
+![RT distribution sub level](figures/Behavioral/RT/group_RT_dist.png)
+
+Outliers are very common in RT data collection. When assessing RT patterns at the group level, mean of medians was looked at in order to better tolerate these outliers.
+
+### On average, how do participants’ respond to each different cue magnitudes?
+Participants RT may follow a parametric response to cue magnitude – on average, participants took the longest time to responsd to cues that gave them the opportunity to win or lose 1 dollar and responded quickest to cues that gave them the opportunity to win or lose 9 dollars.
+
+![Group-level Parametric RTs Magnitude](figures/Behavioral/RT/Group_mean_med_cuemag.png)
+
+### At the group level, do participants respond differently to cues that indicate the potential to gain money on the upcoming trial vs cues that indicate the potential to lose money on the upcoming trial?
+At the group level, participants respond with almost the same speed to potential loss and potential gain trials
+
+![Group-level Valence_RTs](figures/Behavioral/RT/group_meanmed_valence.png)
+
+### Do participants respond differently depending on cue type (loss vs gain, and magnitude)?
+RTs varies slightly with cue type. Loss cues tend to be associated with slightly slower responses relative to the participants’ median RTs, whereas gain cues are generally associated with slightly faster responses, but there is no meaninful difference standing out.
+
+![Group-level Valence_RTs](figures/Behavioral/RT/group_meanmed_cuetype.png)
+
+### Is there a linear relationship between cue magnitude and participants’ typical reaction times?
+
+Median reaction time decreased as incentive magnitude increased, indicating faster responses for higher-value cues. Cue magnitude was a significant predictor of reaction time (linear model, p < .001), explaining ~15% of between-condition variance in median RTs.
+
+Full model output avaialable in full_model_outputs folder/RT_cueMag
+
+![subject-level cueMag vs RT](figures/Behavioral/RT/sublevel-medianrt_cuemag.png)
+
+## Slope Sensitivity
+We hypothesized that participants differ in how strongly their reaction times change as a function of cue magnitude.To quantify individual differences in sensitivity to cue magnitude, we estimated a participant-specific slope relating reaction time to cue magnitude. More negative slopes indicate greater speeding with increasing cue magnitude, whereas slopes closer to zero indicate weaker cue sensitivity.
+
+### What is the distribution of “cue sensitivity slopes” across participants?
+More negative slopes indicate more sensitivity to increasing RTs as cue magnitudes increase where as slopes closer to 0 suggest less cue tendency to respond faster to larger cues.
+
+The bulk of participants show slight sensitivity to increasing cue magnitude. There is not much variability in the distribution of cue magnitude sensitivity across participants.
+
+![subject-level cueMag vs RT](figures/Behavioral/RT/cue_sensitivity_dist.png)
+
+### Is cue sensitivity correlated with higher raw median RT across the task?
+Moderately - cue sensitivity is slightly correlated with faster or slower reaction times across the task. Being more sensitive to cue magnitude moderately correlated to having a quicker overall reaction time in the task.
+
+![Sensitivity vs Median RT](figures/Behavioral/RT/cue_sensitivity_RT.png)
+
+### Is cue sensitivity correlated with winning more trials across the task?
+No – there is very little correlation between cue sensitivity and proportion of trials won. This makes sense as the target is calibrated to ensure a consistent 66% success rate across participants.
+
+![Sensitivity vs Median RT](figures/Behavioral/RT/cue_sensitivity_pwin.png)
+
+### Is cue sensitivity correlated with mean calibration across the task?
+Cue sensitivity may be slightly correlated with mean task calibration. There was a trend that the participants who were more sensitive to cue magnitudes had higher calibration levels. 
+
+![Sensitivity vs Median RT](figures/Behavioral/RT/cuesensitivity_calibration.png)
+
+### Is cue sensitivity correlated with total points earned across the task?
+Moderately – cue sensitivity is moderately correlated with total points earned. Responding quicker to larger cues is moderately (r=-0.5) correlated to earning more points across the task. 
+
+![Sensitivity vs Median RT](figures/Behavioral/RT/cue_sensitivity_totalpoints.png)
+
+### Are reaction times a function of fixation duration?
+Yes- it looks like reaction times decrease (responses happen quicker) as fixation duration increases. This could be a result of the participant being “more are more ready” for the target as the pre-target fixation duration increases.
+
+![Sensitivity vs Median RT](figures/Behavioral/RT/meanofmed_fixdur.png)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
